@@ -1,6 +1,6 @@
-# NIFTY 50 OHLC Data
+# NIFTY50 OHLC Data
 
-Historical NIFTY 50 OHLC intraday data, including 1-minute candles from 2017 and 15-second candles from 04 September 2026.
+Historical NIFTY50 OHLC intraday data, including 1-minute candles from 2017 and 15-second candles from 04 September 2026.
 
 ## Data Structure
 
