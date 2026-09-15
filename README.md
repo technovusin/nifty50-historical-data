@@ -9,9 +9,9 @@ nifty/
 ├── 1min/          # 1-minute candlestick data
 │   ├── 2017/      # Partial year (Apr 3 - Dec 31)
 │   ├── 2018-2025/ # Full years
-│   └── 2026/      # Partial year (Jan 1 - Sep 11)
+│   └── 2026/      # From 01 January 2026
 ├── 15sec/         # 15-second candlestick data
-│   └── 2026/      # Partial year (Sep 4 - Sep 11)
+│   └── 2026/      # From 04 September 2026
 └── README.md      # This file
 ```
 
