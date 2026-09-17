@@ -27,3 +27,7 @@ Each CSV file contains the following columns:
 | High | Highest price during the candle |
 | Low | Lowest price during the candle |
 | Close | Closing price for the candle |
+
+## SENSEX OHLC Data
+
+If you are looking for SENSEX index OHLC data, it can be downloaded at [https://github.com/technovusin/sensex-historical-data](https://github.com/technovusin/sensex-historical-data) 
