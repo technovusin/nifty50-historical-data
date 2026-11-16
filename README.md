@@ -1,86 +1,84 @@
 # NIFTY50 OHLC Data
 
-Historical NIFTY50 OHLC intraday data, including 1-minute candles from 2017 and 15-second candles from 04 September 2026. All times are IST.
+Historical NIFTY50 intraday OHLC data in CSV format. One-minute candles start on 3 April 2017; 15-second candles start on 4 September 2026. All Timestamp values are in Indian Standard Time (IST, UTC+05:30).
+
+## Coverage
+
+| Timeframe | Available from | Layout |
+|-----------|----------------|--------|
+| 1 minute | 3 April 2017 | Yearly files through 2025; monthly files from 2026 |
+| 15 seconds | 4 September 2026 | Monthly files |
 
 ## Data Structure
 
-```
-nifty/
-├── 1min/                 # 1-minute candles (CSV)
-│   ├── 2017/             # One file per year; partial year (Apr 3 - Dec 31)
-│   ├── 2018-2025/        # One file per year
-│   └── 2026/             # One file per month, from 01 January 2026 (includes Volume)
-├── 15sec/                # 15-second candles (CSV)
-│   └── 2026/             # One file per month, from 04 September 2026
-├── parquet/              # Generated Parquet files (not in git, see below)
+```text
+nifty50-historical-data/
+├── 1min/                 # 1-minute CSV candles, grouped by year
+├── 15sec/                # 15-second CSV candles, grouped by year
+├── parquet/              # Generated Parquet files (not stored in git)
 ├── scripts/
-│   └── build_parquet.sql # Builds the Parquet files from the CSVs
-└── README.md             # This file
+│   └── build_parquet.sql # Builds Parquet files from CSVs
+├── LICENSE
+└── README.md
 ```
 
-File names are `NIFTY50_<timeframe>_<year>.csv` for 2017-2025 and `NIFTY50_<timeframe>_<year>-<month>.csv` for 2026, for example `NIFTY50_1min_2026-09.csv`.
+Files through 2025 use the name `NIFTY50_<timeframe>_<year>.csv`; monthly files use `NIFTY50_<timeframe>_<year>-<month>.csv`, for example `NIFTY50_1min_2026-09.csv`.
 
-## File Format
-
-Each CSV file contains the following columns:
+## CSV Format
 
 | Column | Description |
 |--------|-------------|
-| Epoch | Unix timestamp (seconds since 1970-01-01) |
-| Timestamp | ISO 8601 format (YYYY-MM-DDTHH:MM:SS), IST |
-| Open | Opening price for the candle |
-| High | Highest price during the candle |
-| Low | Lowest price during the candle |
-| Close | Closing price for the candle |
-| Volume | 2026 1-minute files only |
+| `Epoch` | Unix timestamp in seconds |
+| `Timestamp` | Candle start time in IST, formatted as `YYYY-MM-DDTHH:MM:SS` without a timezone offset |
+| `Open` | Opening price for the candle |
+| `High` | Highest price during the candle |
+| `Low` | Lowest price during the candle |
+| `Close` | Closing price for the candle |
+| `Volume` | Present in 2026 one-minute CSV files only |
+
+`Timestamp` is a local wall-clock time, so localize it to `Asia/Kolkata` when using timezone-aware tools. `Epoch` identifies the same instant as a Unix timestamp. `Volume` is the index volume calculated by aggregating the traded volumes of all the index's constituent stocks.
 
 ## Parquet Files
 
-Parquet files are not stored in git. Build them from the CSVs with [DuckDB](https://duckdb.org) (run from the repo root):
+Parquet files are generated locally and are not stored in git. Install the [DuckDB CLI](https://duckdb.org/docs/installation/) and run this command from the repository root:
 
-```
+```sh
 duckdb < scripts/build_parquet.sql
 ```
 
-On Windows PowerShell, the `<` redirect isn't supported, so use either of these instead (they also work in Command Prompt and Linux/macOS shells):
+In Windows PowerShell, use one of the following instead:
 
-```
+```powershell
 duckdb -c ".read scripts/build_parquet.sql"
+# Or:
 Get-Content scripts/build_parquet.sql -Raw | duckdb
 ```
 
-This creates the following files in `parquet/`, a columnar format for fast backtesting. Re-run it whenever the CSVs change:
+Re-run the script whenever the CSVs change. It creates these files in `parquet/`:
 
-| File | Timeframe |
-|------|-----------|
-| `NIFTY50_15sec.parquet` | 15 seconds (from 04 Sep 2026) |
-| `NIFTY50_01min.parquet` | 1 minute (includes `volume`, NULL before 2026) |
-| `NIFTY50_02min`, `03min`, `05min`, `10min`, `15min`, `30min`, `60min` | Resampled from 1-minute data |
+| File | Timeframe and columns |
+|------|-----------------------|
+| `NIFTY50_15sec.parquet` | 15-second OHLC |
+| `NIFTY50_01min.parquet` | 1-minute OHLC, plus `volume` (NULL before 2026) |
+| `NIFTY50_02min.parquet`, `NIFTY50_03min.parquet`, `NIFTY50_05min.parquet`, `NIFTY50_10min.parquet`, `NIFTY50_15min.parquet`, `NIFTY50_30min.parquet`, `NIFTY50_60min.parquet` | OHLC resampled from one-minute data |
 
-Columns are `epoch` (BIGINT), `ts` (TIMESTAMP, IST), `open`, `high`, `low`, `close` (DOUBLE). Resampled bars start at the 09:15 session open, and `ts` is the bar start time.
+All files contain `epoch` (BIGINT), `ts` (TIMESTAMP, IST wall time), and `open`, `high`, `low`, `close` (DOUBLE). The one-minute file also contains `volume` (BIGINT). The Parquet timestamp has no timezone attached.
+
+Resampled buckets are aligned to 09:15 IST, and `ts` is the bucket start. Open and close come from the first and last available source candles; high and low are their maximum and minimum. Missing minutes are not filled, and incomplete buckets are retained. A resampled `epoch` is the earliest source candle's epoch, so it can be later than `ts` if the first minute of a bucket is missing. Duplicate epochs are removed when building the source Parquet files.
 
 ```sql
--- DuckDB
-SELECT * FROM 'parquet/NIFTY50_05min.parquet' WHERE ts >= '2024-01-01';
+-- Query a generated file with DuckDB.
+SELECT *
+FROM 'parquet/NIFTY50_05min.parquet'
+WHERE ts >= '2024-01-01';
 ```
 
-## Data Cleaning
+## Adding Data or Reporting Issues
 
-The CSVs and Parquet files have been cleaned:
-
-- Bars outside 09:15-15:29 IST removed, except the evening Diwali muhurat sessions (12 Nov 2023, 1 Nov 2024).
-- Duplicate bars with stray seconds in the timestamp (Aug-Sep 2021) removed, keeping the on-the-minute bar.
-- Three bad first candles in 2022 fixed (25 Mar, 30 Mar, 7 Apr): High/Low adjusted to include Open.
-- Removed suspicious partial or spurious sessions: 7 Aug 2021, 21 Aug 2021, 13 Nov 2021, 8 Jan 2022, 22 Jan 2022, 5 Feb 2022, 9 Apr 2022, 30 Apr 2022.
-- Prices rounded to 2 decimals; duplicate epochs removed.
-
-Known remaining quirks: some single minutes are missing (374 bars on a few days), a few frozen-price stretches exist (e.g. 24 Feb 2021 NSE outage, March 2020 circuit breakers), 4 Nov 2021 has only 43 bars, and 9 Sep 2026 has 3 missing 15-second bars. Weekend rows are real special sessions (budget days, 20 Jan 2024, 2 Mar and 18 May 2024).
-
-## Adding New Data
-
-1. Add the new CSV to the matching folder (for 2026, the current month's file), with the same header as the existing files.
-2. Rebuild the Parquet files with the command above. Duplicate epochs across files are removed automatically.
+1. Add a CSV to the matching timeframe and year folder, using the same header as the existing files for that timeframe and period.
+2. Rebuild the Parquet files using the command above.
+3. Report suspected gaps or corrections through the repository's issue tracker, including the timeframe, date and supporting details.
 
 ## SENSEX OHLC Data
 
-If you are looking for SENSEX index OHLC data, it can be downloaded at [https://github.com/technovusin/sensex-historical-data](https://github.com/technovusin/sensex-historical-data) 
+For SENSEX index OHLC data, see [sensex-historical-data](https://github.com/technovusin/sensex-historical-data).
