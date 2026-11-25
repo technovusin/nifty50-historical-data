@@ -79,6 +79,7 @@ WHERE ts >= '2024-01-01';
 2. Rebuild the Parquet files using the command above.
 3. Report suspected gaps or corrections through the repository's issue tracker, including the timeframe, date and supporting details.
 
-## SENSEX OHLC Data
+## Related Datasets
 
-For SENSEX index OHLC data, see [sensex-historical-data](https://github.com/technovusin/sensex-historical-data).
+- BANKNIFTY Index OHLC data: [https://github.com/technovusin/banknifty-historical-data](https://github.com/technovusin/banknifty-historical-data)
+- SENSEX Index OHLC data: [https://github.com/technovusin/sensex-historical-data](https://github.com/technovusin/sensex-historical-data)
